@@ -6,7 +6,7 @@ from django.urls import reverse
 
 class Movie(models.Model):
 
-    title = models.CharField(_("movie title"), max_length=255)
+    title = models.CharField(_("movie title"), max_length=255, db_index=True)
     description = models.TextField(_("description"))
     slug = AutoSlugField(populate_from="title", unique=True, unique_with=["title", "fileid"])
     downlinks = models.JSONField(_("download links"), default=list)
