@@ -16,8 +16,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.sitemaps import views
+
+from frontend.sitemaps import (
+    MovieSitemap 
+)
+
+sitemaps = {
+    "movie":MovieSitemap,
+}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("frontend.urls")),
+    path("sitemap.xml", views.sitemap, {"sitemaps": sitemaps}, name="django.contrib.sitemaps.views.sitemap"),
+    # path("sitemap-<section>.xml", views.sitemap, {"sitemaps": sitemaps}, name="django.contrib.sitemaps.views.sitemap")
 ]
