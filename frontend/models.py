@@ -8,8 +8,9 @@ class Movie(models.Model):
 
     title = models.CharField(_("movie title"), max_length=255)
     description = models.TextField(_("description"))
-    slug = AutoSlugField(populate_from="title", unique=True)
+    slug = AutoSlugField(populate_from="title", unique=True, unique_with=["title", "fileid"])
     downlinks = models.JSONField(_("download links"), default=list)
+    fileid = models.CharField(_("terabox file id"), max_length=50)
 
     class Meta:
         verbose_name = _("Movie")
