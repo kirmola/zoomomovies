@@ -1,49 +1,104 @@
 import json
+from pathlib import Path
+from datetime import datetime
+
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.utils.text import slugify
 from frontend.models import Movie
-from django.conf import settings
+from tqdm import tqdm
+from shortuuid import ShortUUID
 
 
 class Command(BaseCommand):
-    help = 'Bulk load files from files.jsonl into the database'
+    help = "Load movies and TV series from tmdb.jsonl into the Movie model."
 
-    def handle(self, *args, **options):
-        file_path = settings.BASE_DIR /'files.jsonl'
-        to_create = []
-        existing_ids = set(Movie.objects.values_list('fileid', flat=True))
-        total = 0
-        skipped = 0
+    def handle(self, *args, **kwargs):
+        tmdb_path = Path("/home/kirmola/Downloads/tmdb.jsonl")
 
+        if not tmdb_path.exists():
+            self.stderr.write("tmdb.jsonl not found.")
+            return
+
+        self.load_data(tmdb_path)
+
+    def load_data(self, path):
+        self.stdout.write(f"Loading data from {path.name}...")
+
+        with path.open("r", encoding="utf-8") as f:
+            objects = []
+            seen_slugs = set(Movie.objects.values_list("slug", flat=True))  # Get existing slugs
+
+            for line in tqdm(f, desc="TMDB"):
+                try:
+                    data = json.loads(line)
+                    is_tv = data.get("type") == "tv"
+
+                    title = data["name"] if is_tv else data["title"]
+                    original_title = data.get("original_name") if is_tv else data.get("original_title", "")
+                    release_field = "first_air_date" if is_tv else "release_date"
+                    release_date = self.parse_date(data.get(release_field))
+                    year = release_date.year if release_date else ""
+
+                    imdb_id = data.get("imdb_id")
+                    tmdb_id = data.get("tmdb_id")
+
+                    # === Slug generation ===
+                    base_slug = slugify(f"{title}-{year}")
+                    slug = base_slug
+                    if slug in seen_slugs:
+                        if imdb_id:
+                            slug = slugify(f"{title}-{year}-{imdb_id}")
+                        elif tmdb_id:
+                            slug = slugify(f"{title}-{year}-{tmdb_id}")
+                        else:
+                            slug = slugify(f"{title}-{year}-{ShortUUID().random(8)}")
+
+                        # Last-resort fallback in case it still exists
+                        while slug in seen_slugs:
+                            slug = slugify(f"{title}-{year}-{ShortUUID().random(8)}")
+
+                    seen_slugs.add(slug)
+
+                    obj = Movie(
+                        tmdb_id=tmdb_id,
+                        imdb_id=imdb_id,
+                        title=title,
+                        original_title=original_title,
+                        description=data.get("overview") or data.get("description", ""),
+                        tagline=data.get("tagline", ""),
+                        rating=data.get("vote_average") or data.get("rating"),
+                        vote_count=data.get("vote_count", 0),
+                        popularity=data.get("popularity"),
+                        release_date=release_date,
+                        genres=data.get("genres", []),
+                        spoken_languages=data.get("spoken_languages", []),
+                        poster_path=data.get("poster_path", ""),
+                        backdrop_path=data.get("backdrop_path", ""),
+                        adult=data.get("adult", False),
+                        extra_images=data.get("extra_images", []),
+                        downlinks=data.get("downlinks", []),
+                        slug=slug,
+                        type=data.get("type"),
+                        fileid=data.get("fileid", "")
+                    )
+                    objects.append(obj)
+                except Exception as e:
+                    self.stderr.write(f"Error parsing entry: {e}")
+
+        # Save in batches
+        BATCH_SIZE = 25000
+        with transaction.atomic():
+            for i in tqdm(range(0, len(objects), BATCH_SIZE), desc="Saving"):
+                Movie.objects.bulk_create(objects[i:i + BATCH_SIZE])
+
+        self.stdout.write(f"Imported {len(objects)} entries.")
+
+    @staticmethod
+    def parse_date(date_str):
+        if not date_str:
+            return None
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        data = json.loads(line)
-                        title = data.get('title')
-                        fileid = data.get('id')
-
-                        if not title or not fileid:
-                            continue
-
-                        if fileid in existing_ids:
-                            skipped += 1
-                            continue
-
-                        obj = Movie(title=title, fileid=fileid)
-                        to_create.append(obj)
-                        total += 1
-
-                    except json.JSONDecodeError as e:
-                        self.stderr.write(f"Invalid JSON line: {e}")
-                    except Exception as e:
-                        self.stderr.write(f"Error: {e}")
-
-            if to_create:
-                Movie.objects.bulk_create(to_create, batch_size=1000)
-
-            self.stdout.write(self.style.SUCCESS(
-                f"Import complete. Created: {total}, Skipped (duplicates): {skipped}"
-            ))
-
-        except FileNotFoundError:
-            self.stderr.write(self.style.ERROR(f"File not found: {file_path}"))
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return None

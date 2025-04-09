@@ -1,13 +1,17 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    {% tailwind_css %}
 </head>
 <body>
-    <main>
+    {% include "common/nav.html" %}
+    <main class="container mx-auto py-6 px-4">
         {% block maincontent %}{% endblock maincontent %}
     </main>
+    {% include "common/footer.html" %}
 </body>
 </html>

@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from os import environ
+from dj_database_url import parse
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -42,7 +44,11 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
 ]+[
     "frontend",
+    "tailwind",
+    "theme"
 ]
+
+TAILWIND_APP_NAME = "theme"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -78,10 +84,10 @@ WSGI_APPLICATION = 'zoomomovies.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': parse(
+        url=environ["PG_CONSTRING"],
+        engine="django.db.backends.postgresql"
+    )
 }
 
 
@@ -125,3 +131,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+TMDB_API_KEY = environ["TMDB_API_KEY"]
