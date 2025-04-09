@@ -12,7 +12,6 @@ click==8.1.8
 cookiecutter==2.6.0
 dj-database-url==2.3.0
 Django==5.2
-django-autoslug==1.9.9
 django-hosts==6.0
 django-tailwind==4.0.1
 frozenlist==1.5.0

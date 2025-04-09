@@ -21,4 +21,14 @@ class HomeView(ListView):
     def get_queryset(self):
         return super().get_queryset()[:10]
     
+
+class SearchView(ListView):
+    model = Movie
+    template_name = "search.html"
+    context_object_name = "search"
+    
+    
+    def get_queryset(self):
+        q = self.request.GET.get("q")
+        return super().get_queryset().filter(title__icontains=q)[:10]
     
