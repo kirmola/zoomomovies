@@ -1,28 +1,35 @@
 {% extends "base.html" %}
 {% block maincontent %}
-
 <h1 class="text-2xl font-bold mb-6">Latest Updates</h1>
-    
-    <!-- Movie grid -->
-     
-    
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      <!-- Movie cards (12 placeholders) -->
-       {% for eachmovie in movies %}
-       
-       <a href="{% url "movieview" title=eachmovie.slug %}">
 
-           <div class="bg-white shadow rounded overflow-hidden">
-               <div class="h-48 bg-gray-300"></div>
-               <div class="p-3">
-                   <h3 class="font-medium text-sm">{{eachmovie.title}}</h3>
-                   <p class="text-xs text-gray-600">2023 • Action</p>
-                </div>
+<!-- Movie grid with container to limit width on large screens -->
+<div class="max-w-screen-xl mx-auto">
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+    <!-- Movie cards -->
+    {% for eachmovie in movies %}
+      <a href="{% url 'movieview' title=eachmovie.slug %}" class="block h-full">
+        <div class="bg-white shadow rounded overflow-hidden h-full flex flex-col">
+          <div class="w-full relative pt-[150%]"> <!-- 2:3 aspect ratio container -->
+            {% if eachmovie.poster_path %}
+            <img 
+              src="https://image.tmdb.org/t/p/w342{{ eachmovie.poster_path }}" 
+              alt="{{ eachmovie.title }}" 
+              class="absolute top-0 left-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+            {% else %}
+            <div class="absolute top-0 left-0 w-full h-full bg-gray-300 flex items-center justify-center">
+              <span class="text-gray-500">No Image</span>
             </div>
-        </a>
-
-      {% endfor %}
-
-      
-    </div>
+            {% endif %}
+          </div>
+          <div class="p-2 flex-grow">
+            <h3 class="font-medium text-xs sm:text-sm line-clamp-2">{{ eachmovie.title }}</h3>
+            <p class="text-xs text-gray-600 mt-1">2023 • Action</p>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
 {% endblock maincontent %}
